@@ -34,3 +34,13 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Test / coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# Judicator data curation — raw source clones, not committed
+data_sources/
+scripts/handcurated/*.local.json
