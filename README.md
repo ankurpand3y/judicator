@@ -254,7 +254,7 @@ If you use Judicator in your research, please cite:
   title  = {Judicator: An LLM-as-a-Judge Bias Auditing Library},
   year   = {2026},
   url    = {https://github.com/ankurpand3y/judicator},
-  version = {0.2.3}
+  version = {0.2.4}
 }
 ```
 
