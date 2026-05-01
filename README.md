@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="judicator_logo.svg" alt="Judicator" width="640">
+  <img src="https://raw.githubusercontent.com/ankurpand3y/judicator/main/judicator_logo.svg" alt="Judicator" width="640">
 </p>
 
 <h3 align="center">Judging LLM-as-a-Judge</h3>
@@ -7,7 +7,7 @@
 <p align="center">An LLM-as-a-Judge screening tool for bias and miscalibration.</p>
 
 <p align="center">
-  <a href="https://pypi.org/project/judicator/"><img src="https://badge.fury.io/py/judicator.svg" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/judicator/"><img src="https://img.shields.io/pypi/v/judicator" alt="PyPI version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python"></a>
 </p>
