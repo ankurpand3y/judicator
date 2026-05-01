@@ -30,17 +30,21 @@ class JudgeAuditor:
         confirm: bool = True,
         tests: list[str] | None = None,
         max_items_per_test: int | None = None,
+        max_workers: int = 1,
     ) -> None:
         if domain not in VALID_DOMAINS:
             raise ValueError(
                 f"domain must be one of {sorted(VALID_DOMAINS)}, got {domain!r}"
             )
+        if max_workers < 1:
+            raise ValueError(f"max_workers must be >= 1, got {max_workers}")
         self.judge = judge
         self.domain = domain
         self.cost_per_call = cost_per_call
         self.confirm = confirm
         self.tests = tests
         self.max_items_per_test = max_items_per_test
+        self.max_workers = max_workers
 
     # ── public API ─────────────────────────────────────────────────────────────
 
@@ -81,7 +85,7 @@ class JudgeAuditor:
         results: dict[str, BiasResult] = {}
         for test in runnable:
             results[test.name] = test.run(
-                self.judge, fixture_map[test.name], call_counter
+                self.judge, fixture_map[test.name], call_counter, self.max_workers
             )
 
         # 7. N/A entries for non-applicable and missing-fixture tests

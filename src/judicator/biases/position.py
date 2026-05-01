@@ -4,6 +4,7 @@ from judicator._types import JudgeType
 from judicator.biases.base import (
     BiasResult,
     BiasTest,
+    parallel_map,
     parse_fail_result,
     severity_from_score,
 )
@@ -22,43 +23,39 @@ class PositionBiasTest(BiasTest):
         judge: Judge,
         fixtures: list[dict],
         call_counter: CallCounter,
+        max_workers: int = 1,
     ) -> BiasResult:
+        def score_one(item: dict) -> tuple[str, str, str] | None:
+            q = item["question"]
+            winner = item["winner_response"]
+            loser = item["loser_response"]
+            v_AB = parse_pairwise(judge.llm_fn(
+                judge.eval_template.format(question=q, response_a=winner, response_b=loser)
+            ))
+            call_counter.increment()
+            v_BA = parse_pairwise(judge.llm_fn(
+                judge.eval_template.format(question=q, response_a=loser, response_b=winner)
+            ))
+            call_counter.increment()
+            if v_AB is None or v_BA is None:
+                return None
+            return (v_AB, v_BA, q)
+
+        results = parallel_map(score_one, fixtures, max_workers)
+
         inconsistent = 0
         slot_a_picks = 0
         usable = 0
         failures: list[dict] = []
-
-        for item in fixtures:
-            q = item["question"]
-            winner = item["winner_response"]
-            loser = item["loser_response"]
-
-            # Run 1 — winner in slot A; calibrated answer is "A"
-            v_AB = parse_pairwise(judge.llm_fn(
-                judge.eval_template.format(
-                    question=q, response_a=winner, response_b=loser
-                )
-            ))
-            call_counter.increment()
-
-            # Run 2 — winner in slot B; calibrated answer is "B"
-            v_BA = parse_pairwise(judge.llm_fn(
-                judge.eval_template.format(
-                    question=q, response_a=loser, response_b=winner
-                )
-            ))
-            call_counter.increment()
-
-            if v_AB is None or v_BA is None:
+        for r in results:
+            if r is None:
                 continue
-
+            v_AB, v_BA, q = r
             usable += 1
             if v_AB == "A":
                 slot_a_picks += 1
             if v_BA == "A":
                 slot_a_picks += 1
-
-            # Inconsistency: same slot letter in both orderings = judge ignored content
             if v_AB == v_BA:
                 inconsistent += 1
                 if len(failures) < 3:

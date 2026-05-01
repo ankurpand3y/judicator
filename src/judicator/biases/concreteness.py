@@ -4,6 +4,7 @@ from judicator._types import JudgeType
 from judicator.biases.base import (
     BiasResult,
     BiasTest,
+    parallel_map,
     parse_fail_result,
     resolve_judge_type_from_judge,
     severity_from_score,
@@ -28,20 +29,17 @@ class ConcretenessBiasTest(BiasTest):
         judge: Judge,
         fixtures: list[dict],
         call_counter: CallCounter,
+        max_workers: int = 1,
     ) -> BiasResult:
         jt = resolve_judge_type_from_judge(judge)
         if jt == JudgeType.PAIRWISE:
-            return self._run_pairwise(judge, fixtures, call_counter)
-        return self._run_pointwise(judge, fixtures, call_counter)
+            return self._run_pairwise(judge, fixtures, call_counter, max_workers)
+        return self._run_pointwise(judge, fixtures, call_counter, max_workers)
 
     def _run_pointwise(
-        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter
+        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter, max_workers: int
     ) -> BiasResult:
-        calibrated = 0
-        n = 0
-        failures: list[dict] = []
-
-        for item in fixtures:
+        def score_one(item: dict) -> tuple[float, float, str] | None:
             q = item.get("question", "")
             s_vague = parse_pointwise(judge.llm_fn(
                 judge.eval_template.format(question=q, response=item["vague_response"])
@@ -51,9 +49,19 @@ class ConcretenessBiasTest(BiasTest):
                 judge.eval_template.format(question=q, response=item["concrete_response"])
             ))
             call_counter.increment()
-
             if s_vague is None or s_concrete is None:
+                return None
+            return (s_vague, s_concrete, q)
+
+        results = parallel_map(score_one, fixtures, max_workers)
+
+        calibrated = 0
+        n = 0
+        failures: list[dict] = []
+        for r in results:
+            if r is None:
                 continue
+            s_vague, s_concrete, q = r
             n += 1
             if s_vague >= s_concrete:
                 calibrated += 1
@@ -84,30 +92,33 @@ class ConcretenessBiasTest(BiasTest):
         )
 
     def _run_pairwise(
-        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter
+        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter, max_workers: int
     ) -> BiasResult:
-        calibrated = 0
-        n = 0
-        failures: list[dict] = []
-
-        for item in fixtures:
+        def score_one(item: dict) -> tuple[str, str, str] | None:
             q = item.get("question", "")
             vague = item["vague_response"]
             concrete = item["concrete_response"]
-
-            # AB: vague=A, concrete=B. Calibrated: picks A.
             v_AB = parse_pairwise(judge.llm_fn(
                 judge.eval_template.format(question=q, response_a=vague, response_b=concrete)
             ))
             call_counter.increment()
-            # BA: concrete=A, vague=B. Calibrated: picks B.
             v_BA = parse_pairwise(judge.llm_fn(
                 judge.eval_template.format(question=q, response_a=concrete, response_b=vague)
             ))
             call_counter.increment()
-
             if v_AB is None or v_BA is None:
+                return None
+            return (v_AB, v_BA, q)
+
+        results = parallel_map(score_one, fixtures, max_workers)
+
+        calibrated = 0
+        n = 0
+        failures: list[dict] = []
+        for r in results:
+            if r is None:
                 continue
+            v_AB, v_BA, q = r
             n += 1
             if v_AB == "A" and v_BA == "B":
                 calibrated += 1

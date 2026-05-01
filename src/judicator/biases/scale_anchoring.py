@@ -6,6 +6,7 @@ from judicator._types import JudgeType
 from judicator.biases.base import (
     BiasResult,
     BiasTest,
+    parallel_map,
     parse_fail_result,
     severity_from_score,
 )
@@ -29,20 +30,28 @@ class ScaleAnchoringTest(BiasTest):
         judge: Judge,
         fixtures: list[dict],
         call_counter: CallCounter,
+        max_workers: int = 1,
     ) -> BiasResult:
-        high_scores: list[float] = []
-        low_scores: list[float] = []
-        failures: list[dict] = []
-
-        for item in fixtures:
+        def score_one(item: dict) -> tuple[float, str] | None:
             prompt = _format(judge.eval_template, item)
             if prompt is None:
-                continue
+                return None
             s = parse_pointwise(judge.llm_fn(prompt))
             call_counter.increment()
             if s is None:
+                return None
+            return (s, item["tier"])
+
+        results = parallel_map(score_one, fixtures, max_workers)
+
+        high_scores: list[float] = []
+        low_scores: list[float] = []
+        failures: list[dict] = []
+        for r in results:
+            if r is None:
                 continue
-            if item["tier"] == "high":
+            s, tier = r
+            if tier == "high":
                 high_scores.append(s)
             else:
                 low_scores.append(s)

@@ -34,7 +34,7 @@ SOURCE_META = {
         "license": "Apache 2.0",
     },
     "judicator-curated-v0.1": {
-        "url":     "github.com/ankurpandey42/judicator",
+        "url":     "github.com/ankurpand3y/judicator",
         "paper":   "(none — hand-authored)",
         "license": "Apache-2.0",
     },

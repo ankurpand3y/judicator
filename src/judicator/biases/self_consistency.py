@@ -6,6 +6,7 @@ from judicator._types import JudgeType
 from judicator.biases.base import (
     BiasResult,
     BiasTest,
+    parallel_map,
     parse_fail_result,
     resolve_judge_type_from_judge,
     severity_from_score,
@@ -31,6 +32,7 @@ class SelfConsistencyTest(BiasTest):
         judge: Judge,
         fixtures: list[dict],
         call_counter: CallCounter,
+        max_workers: int = 1,
     ) -> BiasResult:
         jt = resolve_judge_type_from_judge(judge)
         if jt == JudgeType.PAIRWISE:
@@ -39,28 +41,30 @@ class SelfConsistencyTest(BiasTest):
                 "pairwise judges need response pairs (deferred to v0.2)"
             )
         if jt == JudgeType.BINARY:
-            return self._run_binary(judge, fixtures, call_counter)
-        return self._run_pointwise(judge, fixtures, call_counter)
+            return self._run_binary(judge, fixtures, call_counter, max_workers)
+        return self._run_pointwise(judge, fixtures, call_counter, max_workers)
 
     # ── pointwise ──────────────────────────────────────────────────────────────
 
     def _run_pointwise(
-        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter
+        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter, max_workers: int
     ) -> BiasResult:
-        variances: list[float] = []
-
-        for item in fixtures:
+        def score_one(item: dict) -> float | None:
             prompt = _format(judge.eval_template, item)
             if prompt is None:
-                continue
+                return None
             scores = []
             for _ in range(_N_RUNS):
                 s = parse_pointwise(judge.llm_fn(prompt))
                 call_counter.increment()
                 if s is not None:
                     scores.append(s)
-            if len(scores) >= 2:
-                variances.append(float(np.var(scores)))
+            if len(scores) < 2:
+                return None
+            return float(np.var(scores))
+
+        results = parallel_map(score_one, fixtures, max_workers)
+        variances: list[float] = [v for v in results if v is not None]
 
         if not variances:
             return parse_fail_result(self.name)
@@ -83,23 +87,25 @@ class SelfConsistencyTest(BiasTest):
     # ── binary ─────────────────────────────────────────────────────────────────
 
     def _run_binary(
-        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter
+        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter, max_workers: int
     ) -> BiasResult:
-        consistencies: list[float] = []
-
-        for item in fixtures:
+        def score_one(item: dict) -> float | None:
             prompt = _format(judge.eval_template, item)
             if prompt is None:
-                continue
+                return None
             verdicts: list[str] = []
             for _ in range(_N_RUNS):
                 v = parse_binary(judge.llm_fn(prompt))
                 call_counter.increment()
                 if v is not None:
                     verdicts.append(v)
-            if len(verdicts) >= 2:
-                majority = max(set(verdicts), key=verdicts.count)
-                consistencies.append(verdicts.count(majority) / len(verdicts))
+            if len(verdicts) < 2:
+                return None
+            majority = max(set(verdicts), key=verdicts.count)
+            return verdicts.count(majority) / len(verdicts)
+
+        results = parallel_map(score_one, fixtures, max_workers)
+        consistencies: list[float] = [c for c in results if c is not None]
 
         if not consistencies:
             return parse_fail_result(self.name)

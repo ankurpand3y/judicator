@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "judicator"
-version = "0.1.0"
+version = "0.2.0"
 description = "Audit your LLM-as-a-Judge for bias and miscalibration."
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -24,9 +24,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ankurpandey42/judicator"
-Repository = "https://github.com/ankurpandey42/judicator"
-Issues = "https://github.com/ankurpandey42/judicator/issues"
+Homepage = "https://github.com/ankurpand3y/judicator"
+Repository = "https://github.com/ankurpand3y/judicator"
+Issues = "https://github.com/ankurpand3y/judicator/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/judicator"]

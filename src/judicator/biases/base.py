@@ -1,12 +1,30 @@
 from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from typing import Callable, TypeVar
 
 from judicator._types import JudgeType
 from judicator.cost import CallCounter
 from judicator.detector import detect_judge_type
 from judicator.judge import Judge
+
+_T = TypeVar("_T")
+_R = TypeVar("_R")
+
+
+def parallel_map(
+    fn: Callable[[_T], _R],
+    items: list[_T],
+    max_workers: int = 1,
+) -> list[_R]:
+    """Apply fn to each item, in parallel if max_workers > 1. Order preserved."""
+    if max_workers <= 1 or len(items) <= 1:
+        return [fn(x) for x in items]
+    workers = min(max_workers, len(items))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(fn, items))
 
 
 def severity_from_score(score: float) -> str:
@@ -70,6 +88,7 @@ class BiasTest(ABC):
         judge: Judge,
         fixtures: list[dict],
         call_counter: CallCounter,
+        max_workers: int = 1,
     ) -> BiasResult: ...
 
     def is_applicable(self, judge_type: JudgeType) -> bool:

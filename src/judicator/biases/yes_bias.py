@@ -4,6 +4,7 @@ from judicator._types import JudgeType
 from judicator.biases.base import (
     BiasResult,
     BiasTest,
+    parallel_map,
     parse_fail_result,
     severity_from_score,
 )
@@ -27,7 +28,22 @@ class YesBiasTest(BiasTest):
         judge: Judge,
         fixtures: list[dict],
         call_counter: CallCounter,
+        max_workers: int = 1,
     ) -> BiasResult:
+        def score_one(item: dict) -> tuple[str, str, str] | None:
+            try:
+                prompt = judge.eval_template.format(statement=item["statement"])
+            except KeyError:
+                return None
+            verdict = parse_binary(judge.llm_fn(prompt))
+            call_counter.increment()
+            if verdict is None:
+                return None
+            expected = "Yes" if item["ground_truth"] else "No"
+            return (verdict, expected, item["statement"])
+
+        results = parallel_map(score_one, fixtures, max_workers)
+
         correct = 0
         fp = 0   # said Yes to a False statement
         fn = 0   # said No to a True statement
@@ -36,20 +52,12 @@ class YesBiasTest(BiasTest):
         n_usable = 0
         failures: list[dict] = []
 
-        for item in fixtures:
-            expected = "Yes" if item["ground_truth"] else "No"
-            try:
-                prompt = judge.eval_template.format(statement=item["statement"])
-            except KeyError:
-                continue  # template doesn't use {statement}; skip item
-            verdict = parse_binary(judge.llm_fn(prompt))
-            call_counter.increment()
-
-            if verdict is None:
+        for r in results:
+            if r is None:
                 continue
-
+            verdict, expected, statement = r
             n_usable += 1
-            if item["ground_truth"]:
+            if expected == "Yes":
                 n_true += 1
                 if verdict == "No":
                     fn += 1
@@ -64,7 +72,7 @@ class YesBiasTest(BiasTest):
 
             if verdict != expected and len(failures) < 3:
                 failures.append({
-                    "statement": item["statement"][:120],
+                    "statement": statement[:120],
                     "expected": expected,
                     "got": verdict,
                 })

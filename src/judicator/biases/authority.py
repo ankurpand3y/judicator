@@ -6,6 +6,7 @@ from judicator._types import JudgeType
 from judicator.biases.base import (
     BiasResult,
     BiasTest,
+    parallel_map,
     parse_fail_result,
     resolve_judge_type_from_judge,
     severity_from_score,
@@ -28,21 +29,19 @@ class AuthorityBiasTest(BiasTest):
         judge: Judge,
         fixtures: list[dict],
         call_counter: CallCounter,
+        max_workers: int = 1,
     ) -> BiasResult:
         jt = resolve_judge_type_from_judge(judge)
         if jt == JudgeType.PAIRWISE:
-            return self._run_pairwise(judge, fixtures, call_counter)
+            return self._run_pairwise(judge, fixtures, call_counter, max_workers)
         if jt == JudgeType.BINARY:
-            return self._run_binary(judge, fixtures, call_counter)
-        return self._run_pointwise(judge, fixtures, call_counter)
+            return self._run_binary(judge, fixtures, call_counter, max_workers)
+        return self._run_pointwise(judge, fixtures, call_counter, max_workers)
 
     def _run_pointwise(
-        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter
+        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter, max_workers: int
     ) -> BiasResult:
-        inflations: list[float] = []
-        failures: list[dict] = []
-
-        for item in fixtures:
+        def score_one(item: dict) -> tuple[float, float, str] | None:
             q = item["question"]
             s_orig = parse_pointwise(judge.llm_fn(
                 judge.eval_template.format(question=q, response=item["original_response"])
@@ -52,9 +51,18 @@ class AuthorityBiasTest(BiasTest):
                 judge.eval_template.format(question=q, response=item["manipulated_response"])
             ))
             call_counter.increment()
-
             if s_orig is None or s_manip is None:
+                return None
+            return (s_orig, s_manip, q)
+
+        results = parallel_map(score_one, fixtures, max_workers)
+
+        inflations: list[float] = []
+        failures: list[dict] = []
+        for r in results:
+            if r is None:
                 continue
+            s_orig, s_manip, q = r
             inflations.append(s_manip - s_orig)
             if s_manip > s_orig and len(failures) < 3:
                 failures.append({
@@ -85,17 +93,12 @@ class AuthorityBiasTest(BiasTest):
         )
 
     def _run_pairwise(
-        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter
+        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter, max_workers: int
     ) -> BiasResult:
-        authority_wins = 0
-        total_picks = 0
-        failures: list[dict] = []
-
-        for item in fixtures:
+        def score_one(item: dict) -> tuple[str | None, str | None, str]:
             q = item["question"]
             orig = item["original_response"]
             manip = item["manipulated_response"]
-
             v_AB = parse_pairwise(judge.llm_fn(
                 judge.eval_template.format(question=q, response_a=orig, response_b=manip)
             ))
@@ -104,7 +107,14 @@ class AuthorityBiasTest(BiasTest):
                 judge.eval_template.format(question=q, response_a=manip, response_b=orig)
             ))
             call_counter.increment()
+            return (v_AB, v_BA, q)
 
+        results = parallel_map(score_one, fixtures, max_workers)
+
+        authority_wins = 0
+        total_picks = 0
+        failures: list[dict] = []
+        for v_AB, v_BA, q in results:
             if v_AB is not None:
                 total_picks += 1
                 if v_AB == "B":
@@ -113,7 +123,6 @@ class AuthorityBiasTest(BiasTest):
                 total_picks += 1
                 if v_BA == "A":
                     authority_wins += 1
-
             if v_AB == "B" and v_BA == "A" and len(failures) < 3:
                 failures.append({"question": q[:120], "verdict_AB": v_AB, "verdict_BA": v_BA})
 
@@ -138,13 +147,9 @@ class AuthorityBiasTest(BiasTest):
         )
 
     def _run_binary(
-        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter
+        self, judge: Judge, fixtures: list[dict], call_counter: CallCounter, max_workers: int
     ) -> BiasResult:
-        yes_orig = 0
-        yes_manip = 0
-        n = 0
-
-        for item in fixtures:
+        def score_one(item: dict) -> tuple[str, str] | None:
             q = item["question"]
             common = {"question": q, "response": item["original_response"],
                       "statement": item["original_response"]}
@@ -152,16 +157,25 @@ class AuthorityBiasTest(BiasTest):
                 judge.eval_template.format(**_pick(judge.eval_template, common))
             ))
             call_counter.increment()
-
             common["response"] = item["manipulated_response"]
             common["statement"] = item["manipulated_response"]
             r_manip = parse_binary(judge.llm_fn(
                 judge.eval_template.format(**_pick(judge.eval_template, common))
             ))
             call_counter.increment()
-
             if r_orig is None or r_manip is None:
+                return None
+            return (r_orig, r_manip)
+
+        results = parallel_map(score_one, fixtures, max_workers)
+
+        yes_orig = 0
+        yes_manip = 0
+        n = 0
+        for r in results:
+            if r is None:
                 continue
+            r_orig, r_manip = r
             n += 1
             if r_orig == "Yes":
                 yes_orig += 1

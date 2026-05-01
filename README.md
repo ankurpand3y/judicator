@@ -42,10 +42,40 @@ judge = Judge(
 )
 
 # Shows cost estimate and prompts Y/n. Pass confirm=False to skip.
-report = JudgeAuditor(judge=judge, domain="qa", cost_per_call=0.0003).audit()
+# max_workers=20 runs API calls in parallel — typically 10–15× faster.
+report = JudgeAuditor(
+    judge=judge,
+    domain="qa",
+    cost_per_call=0.0003,
+    max_workers=20,
+).audit()
 print(report.summary())
 report.save_json("my_audit.json")
 ```
+
+---
+
+## Speed (`max_workers`)
+
+A full audit makes ~1,000 LLM calls. Sequential runs take 20–25 minutes.
+Set `max_workers` to run calls in parallel via a thread pool:
+
+```python
+JudgeAuditor(judge=judge, domain="qa", max_workers=20).audit()
+```
+
+| `max_workers` | Wall time (~1k calls) | Speedup |
+|---|---|---|
+| 1 (default) | 20–25 min | 1× |
+| 10 | 2.5 min | 8× |
+| **20** | **1.5 min** | **13×** |
+| 50+ | diminishing returns; rate-limit risk | — |
+
+**Caveats**
+
+- **Rate limits.** Cost is unchanged but request rate is much higher. Lower `max_workers` if you see 429 errors — there is no auto-backoff.
+- **Thread-safe `llm_fn` required.** Stateless calls are safe (OpenAI/Anthropic/OpenRouter clients are thread-safe). Don't share conversation state across calls.
+- **Parallelism is per-test.** Within a single bias test, fixture items run concurrently; tests still execute one after another.
 
 ---
 
@@ -182,8 +212,8 @@ If you use Judicator in your research, please cite:
   author = {Pandey, Ankur},
   title  = {Judicator: An LLM-as-a-Judge Bias Auditing Library},
   year   = {2026},
-  url    = {https://github.com/ankurpandey42/judicator},
-  version = {0.1.0}
+  url    = {https://github.com/ankurpand3y/judicator},
+  version = {0.2.0}
 }
 ```
 

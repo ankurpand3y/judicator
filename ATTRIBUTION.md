@@ -40,7 +40,7 @@ All are used in accordance with their licenses.
 - Items used: 420
 
 ## judicator-curated-v0.1
-- Source: github.com/ankurpandey42/judicator
+- Source: github.com/ankurpand3y/judicator
 - Paper: (none — hand-authored)
 - License: Apache-2.0
 - Items used: 100

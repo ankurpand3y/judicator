@@ -1,4 +1,5 @@
 from __future__ import annotations
+import threading
 from dataclasses import dataclass, field
 
 CALLS_PER_TEST: dict[str, object] = {
@@ -38,9 +39,11 @@ class CostEstimate:
 @dataclass
 class CallCounter:
     count: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     def increment(self) -> None:
-        self.count += 1
+        with self._lock:
+            self.count += 1
 
 
 def estimate_calls(
