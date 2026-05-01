@@ -96,33 +96,27 @@ class AuditReport:
 # ── console renderer ───────────────────────────────────────────────────────────
 
 def _render_console(r: AuditReport) -> str:
-    n_applicable = len(r.ranked())
-    n_fail = len(r.failed_tests())
-    n_pass = len(r.passed_tests())
-    na_tests = [t for t in r.tests.values() if t.not_applicable]
+    ranked = r.ranked()
+    n_applicable = len(ranked)
 
-    lines: list[str] = []
+    # Fit Judge/Domain/Type onto one line; truncate name if needed
+    fixed_labels = 31  # len("Judge:   " + "   Domain:  " + "   Type:  ")
+    name_budget = _INNER - 2 - fixed_labels - len(r.domain) - len(r.judge_type)
+    name = r.judge_name
+    if len(name) > name_budget:
+        name = name[:max(4, name_budget - 1)] + "…"
 
-    # Header
-    lines += [
+    lines: list[str] = [
         _sep("╔", "╗"),
         _line("JUDICATOR — AUDIT REPORT"),
         _sep(),
-        _line(f"Judge:   {r.judge_name}"),
-        _line(f"Domain:  {r.domain}"),
-        _line(f"Type:    {r.judge_type}"),
-        _line(f"Tested:  {r.timestamp}"),
-    ]
-
-    # Table header
-    lines += [
+        _line(f"Judge:   {name}   Domain:  {r.domain}   Type:  {r.judge_type}"),
         _tsep("╠", "╦", "╣"),
         _trow("  BIAS TEST", " SCORE", " RANK", " VERDICT", " SEVERITY"),
         _tsep("╠", "╬", "╣"),
     ]
 
-    # Applicable results (worst → best)
-    for res in r.ranked():
+    for res in ranked:
         lines.append(_trow(
             f"  {res.test_name}",
             f" {res.score:.3f}",
@@ -131,51 +125,7 @@ def _render_console(r: AuditReport) -> str:
             f" {res.severity or ''}",
         ))
 
-    # N/A results
-    if na_tests:
-        lines.append(_tsep("╠", "╬", "╣"))
-        for res in na_tests:
-            # severity col shows the judge type the test requires (first word of skip reason)
-            hint = res.skip_reason.split()[0] if res.skip_reason else "—"
-            lines.append(_trow(
-                f"  {res.test_name}",
-                "  —",
-                "  —",
-                " N/A",
-                f" ({hint} only)",
-            ))
-
-    # Top findings
-    fails = r.failed_tests()
-    if fails:
-        lines.append(_sep())
-        lines.append(_line("TOP FINDINGS"))
-        lines.append(_line())
-        for i, res in enumerate(sorted(fails, key=lambda x: x.score)[:3], 1):
-            sev = res.severity or ""
-            lines.append(_line(f"  {i} [{sev}] {res.test_name} — score {res.score:.3f}"))
-            # Show first example if available
-            if res.examples:
-                ex = res.examples[0]
-                for k, v in ex.items():
-                    vstr = str(v)[:50]
-                    lines.append(_line(f"    {k}: {vstr}"))
-            # Show key detail
-            for k, v in list(res.details.items())[:2]:
-                if k != "error":
-                    lines.append(_line(f"    {k}: {v}"))
-            lines.append(_line())
-
-    # Footer
-    lines += [
-        _sep(),
-        _line(f"  {n_fail} tests FAILED · {n_pass} tests PASSED · {len(na_tests)} tests N/A"),
-        _line(),
-    ]
-    for chunk in _wrap(_ATTRIBUTION):
-        lines.append(_line(f"  {chunk}"))
     lines.append(_sep("╚", "╝"))
-
     return "\n".join(lines)
 
 
