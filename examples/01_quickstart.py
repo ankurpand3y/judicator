@@ -25,12 +25,16 @@ judge = Judge(
     system_prompt=system_prompt,
     eval_template=eval_template,
     judge_name="my_first_judge",
-    model_name="gpt-4o-mini",
 )
 
-# confirm=True (default) → press Y at the prompt.
-# Pass confirm=False to skip the prompt in CI or scripts.
-report = JudgeAuditor(judge=judge, domain="qa", cost_per_call=0.0003).audit()
+# confirm=True (default) → press Y at the prompt to start.
+# max_workers=20 runs API calls in parallel (~10–15× faster than serial).
+report = JudgeAuditor(
+    judge=judge,
+    domain="qa",
+    cost_per_call=0.0003,
+    max_workers=20,
+).audit()
 print(report.summary())
 report.save_json("my_audit.json")
 report.save_html("my_audit.html")

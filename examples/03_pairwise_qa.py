@@ -1,7 +1,7 @@
 """Pairwise judge on QA domain — tests position bias.
 
-Note: position bias only runs on domains with position fixtures (qa, code in v0.1).
-summarization/position.jsonl is deferred to v0.2.
+Note: position bias only runs on domains with position fixtures (qa and code).
+Summarization/safety/dialogue position pairs are on the v0.3+ roadmap.
 """
 import openai
 from judicator import Judge, JudgeAuditor
@@ -35,14 +35,13 @@ judge = Judge(
     system_prompt=system_prompt,
     eval_template=eval_template,
     judge_name="pairwise_qa_judge",
-    model_name="gpt-4o",
 )
 
 report = JudgeAuditor(
     judge=judge,
     domain="qa",
     cost_per_call=0.005,
-    confirm=False,
+    max_workers=20,
 ).audit()
 
 print(report.summary())

@@ -33,7 +33,6 @@ judge = Judge(
     system_prompt=system_prompt,
     eval_template=eval_template,
     judge_name="dialogue_judge_v1",
-    model_name="claude-haiku-4-5",
 )
 
 auditor = JudgeAuditor(
@@ -41,6 +40,7 @@ auditor = JudgeAuditor(
     domain="dialogue",
     cost_per_call=0.0003,
     confirm=True,
+    max_workers=20,
 )
 
 # Preview cost before running

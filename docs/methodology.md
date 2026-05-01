@@ -67,7 +67,7 @@ spread = 7.0, score = min(1.0, 7.0/6.3) = 1.0.
 A judge that assigns 7.0 to all items achieves spread = 0, score = 0.0.
 
 **Limitation:** assumes a 1-10 scale. If your judge uses a different scale
-(e.g., 0-5), results will be misleading. v0.2 will add scale auto-detection.
+(e.g., 0-5), results will be misleading. Scale auto-detection is on the roadmap.
 
 ---
 

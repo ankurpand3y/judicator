@@ -99,9 +99,10 @@ def _render_console(r: AuditReport) -> str:
     ranked = r.ranked()
     n_applicable = len(ranked)
 
-    # Fit Judge/Domain/Type onto one line; truncate name if needed
+    # Fit Judge/Domain/Type onto one line; truncate name if needed.
+    # Reserve 4 chars of trailing padding so the right border doesn't crowd the text.
     fixed_labels = 31  # len("Judge:   " + "   Domain:  " + "   Type:  ")
-    name_budget = _INNER - 2 - fixed_labels - len(r.domain) - len(r.judge_type)
+    name_budget = _INNER - 2 - 4 - fixed_labels - len(r.domain) - len(r.judge_type)
     name = r.judge_name
     if len(name) > name_budget:
         name = name[:max(4, name_budget - 1)] + "…"
@@ -156,7 +157,7 @@ def _to_dict(r: AuditReport) -> dict:
             }
 
     return {
-        "judicator_version": "0.2.1",
+        "judicator_version": "0.2.2",
         "timestamp": r.timestamp,
         "judge": {
             "name": r.judge_name,
@@ -286,7 +287,7 @@ def _render_html(r: AuditReport) -> str:
 </table>
 {findings_html}
 <div class="footer">
-  Judicator v0.2.1 &nbsp;·&nbsp; {_ATTRIBUTION}
+  Judicator v0.2.2 &nbsp;·&nbsp; {_ATTRIBUTION}
 </div>
 </body>
 </html>"""

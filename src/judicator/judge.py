@@ -11,7 +11,6 @@ class Judge:
     system_prompt: str
     eval_template: str
     judge_name: str = "unnamed_judge"
-    model_name: str = "unknown"
     judge_type: str | None = None
 
     def __post_init__(self) -> None:

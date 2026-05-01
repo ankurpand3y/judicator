@@ -31,13 +31,12 @@ judge = Judge(
     system_prompt=system_prompt,
     eval_template=eval_template,
     judge_name="local_safety_classifier",
-    model_name="llama3",
 )
 
 report = JudgeAuditor(
     judge=judge,
     domain="safety",
-    confirm=False,
+    max_workers=20,
 ).audit()
 
 print(report.summary())

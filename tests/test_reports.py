@@ -121,7 +121,7 @@ def test_summary_printed_during_audit(capsys: pytest.CaptureFixture[str]) -> Non
     )
     JudgeAuditor(judge, domain="dialogue", confirm=False, max_items_per_test=2).audit()
     out = capsys.readouterr().out
-    assert "Estimated judge calls" in out
+    assert "AUDIT PLAN" in out
 
 
 # ── JSON export ────────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ def test_json_version_is_string(pointwise_report: AuditReport) -> None:
         path = str(Path(d) / "audit.json")
         pointwise_report.save_json(path)
         data = json.loads(Path(path).read_text())
-    assert data["judicator_version"] == "0.2.1"
+    assert data["judicator_version"] == "0.2.2"
 
 
 def test_json_all_7_tests_present(pointwise_report: AuditReport) -> None:

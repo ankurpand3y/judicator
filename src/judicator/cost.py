@@ -13,6 +13,29 @@ CALLS_PER_TEST: dict[str, object] = {
 }
 
 
+_W = 64
+_INNER = _W - 2  # 62
+_COL_TEST = 22
+_COL_CALLS = _INNER - _COL_TEST - 1  # remaining inner width minus column separator
+
+
+def _row(label: str, value: str) -> str:
+    text = f"{label}{value}"
+    return f"║  {text:<{_INNER - 2}}║"
+
+
+def _trow(test: str, calls: str) -> str:
+    return f"║ {test[:_COL_TEST - 1]:<{_COL_TEST - 1}}║ {calls[:_COL_CALLS - 1]:<{_COL_CALLS - 1}}║"
+
+
+def _hr(left: str = "╠", right: str = "╣", fill: str = "═") -> str:
+    return left + fill * _INNER + right
+
+
+def _trow_sep(left: str, mid: str, right: str) -> str:
+    return left + "═" * _COL_TEST + mid + "═" * _COL_CALLS + right
+
+
 @dataclass
 class CostEstimate:
     total_calls: int
@@ -20,20 +43,44 @@ class CostEstimate:
     estimated_cost_usd: float | None
     cost_per_call: float | None
 
-    def display(self) -> None:
-        print(f"\nEstimated judge calls: {self.total_calls}")
-        print("\nBreakdown by test:")
+    def display(
+        self,
+        judge_name: str | None = None,
+        judge_type: str | None = None,
+        judge_type_auto: bool = False,
+        domain: str | None = None,
+    ) -> None:
+        lines: list[str] = [
+            _hr("╔", "╗"),
+            _row("", "AUDIT PLAN"),
+            _hr(),
+        ]
+        if judge_name is not None:
+            lines.append(_row("Judge:    ", judge_name))
+        if judge_type is not None:
+            jt = judge_type + (" (auto-detected)" if judge_type_auto else "")
+            lines.append(_row("Type:     ", jt))
+        if domain is not None:
+            lines.append(_row("Domain:   ", domain))
+
+        lines.append(_trow_sep("╠", "╦", "╣"))
+        lines.append(_trow(" TEST", " CALLS"))
+        lines.append(_trow_sep("╠", "╬", "╣"))
         for test, calls in self.calls_per_test.items():
-            print(f"  {test:<22} {calls} calls")
+            lines.append(_trow(f" {test}", f" {calls}"))
+        lines.append(_trow_sep("╠", "╩", "╣"))
+
+        lines.append(_row("Total calls:  ", str(self.total_calls)))
         if self.estimated_cost_usd is not None:
-            print(f"\nEstimated cost: ${self.estimated_cost_usd:.2f} USD")
-            print(f"(based on ${self.cost_per_call:.4f} per call — rough estimate;")
-            print(f" actual cost depends on prompt + response length)")
+            cost_str = (
+                f"~${self.estimated_cost_usd:.2f} USD "
+                f"(${self.cost_per_call:.6f}/call)"
+            )
+            lines.append(_row("Estimated cost: ", cost_str))
         else:
-            print("\nTip: pass cost_per_call=<USD per call> to see cost estimate.")
-            print("  OpenAI gpt-4o:        ~$0.005 per call")
-            print("  OpenAI gpt-4o-mini:   ~$0.0003 per call")
-            print("  Anthropic claude-3.5: ~$0.006 per call")
+            lines.append(_row("", "Pass cost_per_call=<USD/call> for cost estimate"))
+        lines.append(_hr("╚", "╝"))
+        print("\n" + "\n".join(lines))
 
 
 @dataclass

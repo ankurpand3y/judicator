@@ -49,5 +49,7 @@ scripts/handcurated/*.local.json
 plan-build.md
 plan-dataprep.md
 
-# Local test scripts
+# Local test scripts and their output
 test_local.py
+audit_result.json
+*.audit.html

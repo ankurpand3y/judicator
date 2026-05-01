@@ -68,8 +68,11 @@ def test_display_no_cost(capsys: pytest.CaptureFixture[str]) -> None:
     est = estimate_calls(["verbosity"], {"verbosity": 50})
     est.display()
     out = capsys.readouterr().out
-    assert "100 calls" in out
-    assert "Tip:" in out
+    assert "AUDIT PLAN" in out
+    assert "verbosity" in out
+    assert "100" in out
+    assert "Total calls" in out
+    assert "cost_per_call" in out
 
 
 def test_display_with_cost(capsys: pytest.CaptureFixture[str]) -> None:
@@ -77,7 +80,7 @@ def test_display_with_cost(capsys: pytest.CaptureFixture[str]) -> None:
     est.display()
     out = capsys.readouterr().out
     assert "$0.50 USD" in out
-    assert "0.0050" in out
+    assert "0.005000/call" in out
 
 
 def test_display_all_tests(capsys: pytest.CaptureFixture[str]) -> None:

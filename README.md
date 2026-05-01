@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="judicator_logo.svg" alt="Judicator" width="320">
+  <img src="judicator_logo.svg" alt="Judicator" width="640">
 </p>
 
 <h3 align="center">Judging LLM-as-a-Judge</h3>
@@ -19,6 +19,10 @@
 ```bash
 pip install judicator
 ```
+
+> **Windows note:** the report uses Unicode box-drawing characters. If you see
+> `UnicodeEncodeError` when calling `print(report.summary())`, run with
+> `PYTHONUTF8=1` or `set PYTHONUTF8=1` (Windows shell) before launching Python.
 
 ---
 
@@ -250,7 +254,7 @@ If you use Judicator in your research, please cite:
   title  = {Judicator: An LLM-as-a-Judge Bias Auditing Library},
   year   = {2026},
   url    = {https://github.com/ankurpand3y/judicator},
-  version = {0.2.1}
+  version = {0.2.2}
 }
 ```
 
