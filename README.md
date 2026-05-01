@@ -1,10 +1,16 @@
-# Judicator
+<p align="center">
+  <img src="judicator_logo.svg" alt="Judicator" width="320">
+</p>
 
-**Audit your LLM-as-a-Judge for bias and miscalibration.**
+<h3 align="center">Judging LLM-as-a-Judge</h3>
 
-[![PyPI version](https://badge.fury.io/py/judicator.svg)](https://pypi.org/project/judicator/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+<p align="center">An LLM-as-a-Judge screening tool for bias and miscalibration.</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/judicator/"><img src="https://badge.fury.io/py/judicator.svg" alt="PyPI version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python"></a>
+</p>
 
 ---
 
@@ -111,6 +117,10 @@ Judge type is auto-detected from your `eval_template`. Override with
 Judicator never touches your API keys or model configuration.
 You wrap your LLM call in a function — Judicator calls that function.
 
+> **Stateless calls required.** Each call to `llm_fn` must be independent with no shared
+> conversation context between calls. Judicator calls it multiple times per fixture item —
+> if your judge accumulates history across calls, bias measurements will be invalid.
+
 **OpenAI**
 ```python
 import openai
@@ -139,6 +149,26 @@ def my_fn(prompt: str) -> str:
     ).content[0].text
 ```
 
+**OpenRouter** (access 200+ models with one API key)
+```python
+import openai
+
+client = openai.OpenAI(
+    api_key=os.environ["OPENROUTER_API_KEY"],
+    base_url="https://openrouter.ai/api/v1",
+)
+
+def my_fn(prompt: str) -> str:
+    return client.chat.completions.create(
+        model="meta-llama/llama-3.2-3b-instruct",
+        max_tokens=256,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+    ).choices[0].message.content
+```
+
 **Ollama (local)**
 ```python
 import ollama
@@ -150,7 +180,7 @@ def my_fn(prompt: str) -> str:
     )["message"]["content"]
 ```
 
-Pass any of these as `llm_fn` to `Judge`. Judicator works identically with all three.
+Pass any of these as `llm_fn` to `Judge`. Judicator works identically with all four.
 
 ---
 
@@ -187,7 +217,7 @@ not that the judge passed the test.
 
 ---
 
-## What v0.1 does NOT cover
+## What v0.2 does NOT cover
 
 - Composite scoring / single overall grade
 - Sycophancy, compassion fade, bandwagon, sentiment, fallacy oversight, and
@@ -199,7 +229,14 @@ not that the judge passed the test.
 - Token-aware cost estimation (currently flat-per-call)
 - GitHub Actions integration or SaaS dashboard
 
-These are v0.2+ scope. See [Out of Scope in plan-build.md](plan-build.md).
+---
+
+## Coming in future versions
+
+- **More statistically significant results** — expanded fixture sets; concreteness is currently n=14 (coarse signal)
+- **Domain coverage expansion** — position pairs for summarization, safety, and dialogue
+- **User-provided data** — BYO-data mode to run bias tests on your own examples
+- **Labeling sheet output** — export structured sheets for human annotation workflows
 
 ---
 
@@ -213,7 +250,7 @@ If you use Judicator in your research, please cite:
   title  = {Judicator: An LLM-as-a-Judge Bias Auditing Library},
   year   = {2026},
   url    = {https://github.com/ankurpand3y/judicator},
-  version = {0.2.0}
+  version = {0.2.1}
 }
 ```
 

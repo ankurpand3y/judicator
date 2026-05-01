@@ -151,7 +151,7 @@ def test_json_version_is_string(pointwise_report: AuditReport) -> None:
         path = str(Path(d) / "audit.json")
         pointwise_report.save_json(path)
         data = json.loads(Path(path).read_text())
-    assert data["judicator_version"] == "0.2.0"
+    assert data["judicator_version"] == "0.2.1"
 
 
 def test_json_all_7_tests_present(pointwise_report: AuditReport) -> None:

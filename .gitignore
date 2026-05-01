@@ -44,3 +44,10 @@ htmlcov/
 # Judicator data curation — raw source clones, not committed
 data_sources/
 scripts/handcurated/*.local.json
+
+# Internal planning docs
+plan-build.md
+plan-dataprep.md
+
+# Local test scripts
+test_local.py

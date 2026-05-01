@@ -6,6 +6,7 @@ VALID_JUDGE_TYPES: set[str | None] = {"pointwise", "pairwise", "binary", None}
 
 @dataclass
 class Judge:
+    # Must be stateless — called independently per fixture with no shared context
     llm_fn: Callable[[str], str]
     system_prompt: str
     eval_template: str

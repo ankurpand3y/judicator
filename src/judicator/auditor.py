@@ -76,6 +76,7 @@ class JudgeAuditor:
 
         # 5. Estimate + confirm
         est = self._build_estimate(runnable, fixture_map)
+        self._print_header(judge_type)
         est.display()
         if self.confirm:
             self._ask_confirmation()
@@ -163,6 +164,17 @@ class JudgeAuditor:
             fixture_counts={t.name: len(fixture_map[t.name]) for t in runnable},
             cost_per_call=self.cost_per_call,
         )
+
+    def _print_header(self, judge_type: JudgeType) -> None:
+        jt_label = judge_type.value
+        if not self.judge.judge_type:
+            jt_label += " (auto-detected)"
+        sep = "-" * 41
+        print(f"\n{sep}")
+        print(f"  Judge:       {self.judge.judge_name}")
+        print(f"  Judge type:  {jt_label}")
+        print(f"  Domain:      {self.domain}")
+        print(f"{sep}\n")
 
     def _ask_confirmation(self) -> None:
         if not sys.stdin.isatty():

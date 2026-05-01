@@ -206,7 +206,7 @@ def _to_dict(r: AuditReport) -> dict:
             }
 
     return {
-        "judicator_version": "0.2.0",
+        "judicator_version": "0.2.1",
         "timestamp": r.timestamp,
         "judge": {
             "name": r.judge_name,
@@ -336,7 +336,7 @@ def _render_html(r: AuditReport) -> str:
 </table>
 {findings_html}
 <div class="footer">
-  Judicator v0.2.0 &nbsp;·&nbsp; {_ATTRIBUTION}
+  Judicator v0.2.1 &nbsp;·&nbsp; {_ATTRIBUTION}
 </div>
 </body>
 </html>"""
